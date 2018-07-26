@@ -88,5 +88,87 @@
         }
     };
 
+    Controller.prototype.editItemCancel = function(id) {
+        var self = this;
+        self.model.read(id, function(data) {
+            self.view.render('editItemDone', {id:id, title:data[0].title});
+        });
+    };
 
-});
+    Controller.prototype.removeCompletedItems = function() {
+        var self = this;
+        self.model.read( { completed: true}, function(data) {
+            date.forEach(function(item) {
+                self.removeItem(item.id);
+            });
+        });
+        
+        self._filter();
+    };
+
+    Controller.prototype.toggleComplete = function (id, complete, silent) {
+        var self = this;
+        self.model.update(id,{completed:completed},function() {
+            self.view.render('elementComplete', {
+                id: id,
+                completed: completed
+            });
+        });
+
+        if (!silent) {
+            self._filter();
+        }
+    };
+
+    Controller.prototype.toggleAll = function(completed) {
+        var self = this;
+        self.model.read( {completed: !completed}, function(data) {
+            data.forEach(function(item) {
+                self.toggleComplete(item.id, completed,true);
+            });
+        });
+
+        self._filter();
+    };
+
+    Controller.prototype._updateCount = function() {
+        var self = this;
+        self.model.getCount(function(todos) {
+            self.view.render('updateElementCount',todos.active);
+            self.view.render('clearCompletedButton', {
+                completed: todos.completed,
+                visible: todos.completed >0
+            });
+
+            self.view.render('toggleAll', {check:todos.completed === todos.total});
+            self.view.render('contentBlockVisibility', {visible: todos.total > 0});
+        });
+    };
+
+    Controller.prototype._filter = function(force) {
+        var activeRoute = this._activeRoute.charAt(0).toUpperCase() + this._activeRoute.substr(1);
+        this._updateCount();
+
+        if (force || this._lastActiveRoute !== "All" || this._lastActiveRoute !== activeRoute) {
+            this['show' + activeRoute]();
+        }
+
+        this._lastActiveRoute = activeRoute;
+    };
+
+    Controller.prototype._updateFilterState = function(currentPage) {
+        this._activeRoute = currentPage;
+
+        if (currentPage === '') {
+            this._activeRoute = 'All';
+        }
+
+        this._filter();
+
+        this.view.render('setFilter', currentPage);
+    };
+
+    window.app = window.app || {};
+    window.app.Controller = Controller;
+
+}(window));
